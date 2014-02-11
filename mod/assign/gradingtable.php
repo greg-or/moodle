@@ -906,7 +906,11 @@ class assign_grading_table extends table_sql implements renderable {
                     $row->timesubmitted > $instance->duedate) {
                 if (!$row->extensionduedate ||
                         $row->timesubmitted > $row->extensionduedate) {
-                    $usertime = format_time($row->timesubmitted - $instance->duedate);
+                    if ($row->extensionduedate) {
+                        $usertime = format_time($row->timesubmitted - $row->extensionduedate);
+                    } else {
+                        $usertime = format_time($row->timesubmitted - $instance->duedate);
+                    }
                     $latemessage = get_string('submittedlateshort',
                                               'assign',
                                               $usertime);
