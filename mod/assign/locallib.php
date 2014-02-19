@@ -4917,6 +4917,48 @@ class assign {
                                           $data);
                 }
             }
+            $submission = null;
+            if ($this->instance->teamsubmission) {
+                $submission = $this->get_group_submission($userid, 0, false);
+            } else {
+                $submission = $this->get_user_submission($userid, false);
+            }
+            $maxattemptsreached = !empty($submission) &&
+                                $submission->attemptnumber >= ($this->instance->maxattempts - 1) &&
+                                $this->instance->maxattempts != ASSIGN_UNLIMITED_ATTEMPTS;
+            $shouldreopen = false;
+            if ($this->instance->attemptreopenmethod == ASSIGN_ATTEMPT_REOPEN_METHOD_UNTILPASS) {
+              // Check the gradetopass from the gradebook.
+              $gradinginfo = grade_get_grades($this->get_course()->id,
+                                              'mod',
+                                              'assign',
+                                              $this->instance->id,
+                                              $userid);
+              // What do we do if the grade has not been added to the gradebook (e.g. blind marking)?
+              $gradingitem = null;
+              $gradebookgrade = null;
+              if (isset($gradinginfo->items[0])) {
+                  $gradingitem = $gradinginfo->items[0];
+                  $gradebookgrade = $gradingitem->grades[$userid];
+              }
+
+              if ($gradebookgrade) {
+                // TODO: This code should call grade_grade->is_passed().
+                $shouldreopen = true;
+                if (is_null($gradebookgrade->grade)) {
+                    $shouldreopen = false;
+                }
+                if (empty($gradingitem->gradepass) || $gradingitem->gradepass == $gradingitem->grademin) {
+                    $shouldreopen = false;
+                }
+                if ($gradebookgrade->grade >= $gradingitem->gradepass) {
+                    $shouldreopen = false;
+                }
+              }
+            }
+            if ($shouldreopen && !$maxattemptsreached) {
+                $this->add_attempt($userid);
+            }
 
             $addtolog = $this->add_to_log('grade submission', $this->format_grade_for_log($grade), '', true);
             $params = array(
